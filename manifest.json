@@ -1,0 +1,9 @@
+{
+	"id": "obsidian-openaleph-explore",
+	"name": "OpenAleph Explore",
+	"version": "1.0.0",
+	"minAppVersion": "1.7.2",
+	"description": "OpenAleph Explore turns your notes into contextual, structured data, by querying OpenAleph instances.",
+	"author": "noop",
+	"isDesktopOnly": false
+}

@@ -1,0 +1,28 @@
+.openaleph-source-box {
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin-bottom: 12px;
+}
+
+.openaleph-spin svg {
+    animation: spin-rotation 0.8s linear infinite;
+}
+
+@keyframes spin-rotation {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.openaleph-instance-connection-valid svg {
+    color: var(--color-green);
+}
+
+.openaleph-instance-connection-invalid svg {
+    color: var(--color-red);
+}
