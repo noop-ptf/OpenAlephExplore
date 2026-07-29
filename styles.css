@@ -26,3 +26,14 @@
 .openaleph-instance-connection-invalid svg {
     color: var(--color-red);
 }
+
+.openaleph-note-preview-container {
+    overflow: hidden;
+    padding: 1em;
+    border: 1px solid var(--color-accent);
+    border-radius: 0.5rem;
+}
+
+.openaleph-note-preview {
+    white-space: pre-wrap;
+}

@@ -193,9 +193,10 @@ export class OpenAlephSettingTab extends PluginSettingTab {
 }
 
 async function canConnect(instanceUrl: string, apiKey: string | null) {
-	const url = new URL('/api/2/metadata', instanceUrl);
+	const url = new URL('/api/2/status', instanceUrl);
 	let headers: Record<string, string> = {
 		'User-Agent': 'alephclient',
+		Pragma: 'no-cache',
 	};
 	if (apiKey !== null) {
 		headers['Authorization'] = apiKey;
