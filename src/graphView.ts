@@ -9,7 +9,6 @@ export class EntityGraphView extends ItemView {
 	private cy: cytoscape.Core | null = null;
 	private graphContainerEl: HTMLElement | null = null;
 	private entities: OpenAlephGraph | null = null;
-	private resizeObserver: ResizeObserver | null = null;
 
 	constructor(leaf: WorkspaceLeaf) {
 		super(leaf);

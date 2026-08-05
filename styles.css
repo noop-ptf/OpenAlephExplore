@@ -49,3 +49,26 @@
     height: 100%;
     width: 100%;
 }
+
+.openaleph-loading-modal {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--size-2-2);
+    padding: var(--size-2-3);
+}
+
+.openaleph-spinner {
+    width: var(--size-4-8);
+    height: var(--size-4-8);
+    border: 3px solid var(--background-modifier-border);
+    border-top-color: var(--interactive-accent);
+    border-radius: 50%;
+    animation: openaleph-spin 0.8s linear infinite;
+}
+
+@keyframes openaleph-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}

@@ -10,7 +10,7 @@ import {
 	OpenAlephCloselyCorrelatedApiResult,
 	OpenAlephCloselyCorrelatedApiTerm,
 } from './types';
-import { ConfirmNoteModal } from './modals';
+import { ConfirmNoteModal, LoadingModal } from './modals';
 import { EntityGraphView, VIEW_TYPE_ENTITY_GRAPH } from './graphView';
 import { buildMarkdownTable } from './tableBuilder';
 
@@ -78,11 +78,16 @@ export default class OpenAlephPlugin extends Plugin {
 		content: string,
 		noteName: string,
 	): Promise<void> {
+		const loadingModal = new LoadingModal(this.app);
+		loadingModal.open();
+
 		try {
 			await explore(this.settings, this.app, content, noteName);
 		} catch (err: unknown) {
 			const message = err instanceof Error ? err.message : String(err);
 			new Notice(message);
+		} finally {
+			loadingModal.close();
 		}
 	}
 

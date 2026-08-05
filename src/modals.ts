@@ -53,8 +53,8 @@ export class ConfirmNoteModal extends Modal {
 			cls: 'mod-cta',
 		});
 		confirmButton.addEventListener('click', () => {
-			this.onConfirm();
 			this.close();
+			this.onConfirm();
 		});
 
 		const cancelButton = buttonContainer.createEl('button', {
@@ -63,6 +63,26 @@ export class ConfirmNoteModal extends Modal {
 		cancelButton.addEventListener('click', () => {
 			this.close();
 		});
+	}
+
+	onClose() {
+		this.contentEl.empty();
+	}
+}
+
+export class LoadingModal extends Modal {
+	constructor(
+		app: App,
+		private message: string = 'Exploring…',
+	) {
+		super(app);
+	}
+
+	onOpen() {
+		const { contentEl } = this;
+		contentEl.addClass('openaleph-loading-modal');
+		contentEl.createDiv({ cls: 'openaleph-spinner' });
+		contentEl.createEl('p', { text: this.message });
 	}
 
 	onClose() {
