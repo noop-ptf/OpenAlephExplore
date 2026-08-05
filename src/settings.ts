@@ -11,7 +11,7 @@ import {
 import {
 	OpenAlephInstanceSettings,
 	OpenAlephPluginSettings,
-} from './openaleph';
+} from './types';
 import OpenAlephPlugin from './main';
 
 export const DEFAULT_INSTANCE: Omit<OpenAlephInstanceSettings, 'id'> = {

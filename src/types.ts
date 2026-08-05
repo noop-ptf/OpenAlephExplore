@@ -1,13 +1,41 @@
+export interface OpenAlephGraph {
+	centralNote: string;
+	relatedEntities?: OpenAlephEntity[];
+}
+
 export interface OpenAlephEntity {
 	schema: string;
 	dataset: string;
 	caption: string;
 	id: string;
 	instance: string;
+	instanceName: string;
 	url: string;
+	closelyCorrelated?: OpenAlephCloselyCorrelatedApiTerm[];
 }
 
-export interface OpenAlephApiResponseEntity {
+export interface OpenAlephCloselyCorrelatedApiResult {
+	status: string;
+	facets: {
+		'names.significant_terms'?: {
+			values: OpenAlephCloselyCorrelatedApiTerm[];
+		};
+	};
+}
+
+export interface OpenAlephCloselyCorrelatedApiTerm {
+	id: string;
+	label: string;
+	count: number;
+	searchQuery?: string;
+}
+
+export interface OpenAlephPercolationApiResult {
+	status: string;
+	results: OpenAlephPercolationApiEntity[];
+}
+
+export interface OpenAlephPercolationApiEntity {
 	schema: string;
 	dataset: string;
 	caption: string;
@@ -15,6 +43,11 @@ export interface OpenAlephApiResponseEntity {
 	links: {
 		self: string;
 	};
+}
+
+export interface OpenAlephGroupedEntities {
+	instance: string;
+	relatedEntities?: OpenAlephEntity[];
 }
 
 export interface OpenAlephPluginSettings {

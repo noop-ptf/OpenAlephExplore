@@ -37,3 +37,15 @@
 .openaleph-note-preview {
     white-space: pre-wrap;
 }
+
+.openaleph-entity-graph-view-container {
+    height: 100%;
+    width: 100%;
+    display: flex;
+}
+
+.openaleph-entity-graph-cy-container {
+    flex: 1 1 auto;
+    height: 100%;
+    width: 100%;
+}

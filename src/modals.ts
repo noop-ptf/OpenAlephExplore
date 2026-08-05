@@ -1,3 +1,5 @@
+/* eslint-disable obsidianmd/ui/sentence-case -- This is all valid sentence case */
+
 import { App, Modal } from 'obsidian';
 
 export class ConfirmNoteModal extends Modal {
@@ -21,6 +23,7 @@ export class ConfirmNoteModal extends Modal {
 		const { contentEl } = this;
 
 		contentEl.createEl('h2', { text: 'Confirm note' });
+
 		contentEl.createEl('p', {
 			text: `The note below will be sent to all enabled OpenAleph instances.`,
 		});
@@ -66,3 +69,5 @@ export class ConfirmNoteModal extends Modal {
 		this.contentEl.empty();
 	}
 }
+
+/* eslint-enable obsidianmd/ui/sentence-case -- Done with weird sentnces */
