@@ -3,7 +3,6 @@ import type {
 	OpenAlephGroupedEntities,
 	OpenAlephEntity,
 } from './types';
-import { App, Notice, TFile } from 'obsidian';
 
 function groupEntitiesByInstance(
 	graph: OpenAlephGraph,
@@ -25,10 +24,7 @@ function groupEntitiesByInstance(
 	}));
 }
 
-export async function buildMarkdownTable(
-	entities: OpenAlephGraph,
-	app: App,
-): Promise<void> {
+export function buildMarkdownTableContent(entities: OpenAlephGraph): string {
 	let lines: string[] = [
 		'| Instance | Type | Entity name | Related names |',
 		'| :--- | :---: | :---: | ---: |',
@@ -57,21 +53,5 @@ export async function buildMarkdownTable(
 		}
 	}
 
-	const content = lines.join('\n');
-	const tableFilePath = `${entities.centralNote} table summary.md`;
-
-	const existing = app.vault.getAbstractFileByPath(tableFilePath);
-
-	try {
-		if (existing instanceof TFile) {
-			// File already exists — overwrite its contents
-			await app.vault.modify(existing, content);
-		} else {
-			await app.vault.create(tableFilePath, content);
-		}
-		new Notice(`Saved table to ${tableFilePath}`);
-	} catch (err) {
-		console.error('Failed to save markdown table:', err);
-		new Notice('Failed to save Markdown table. See console for details.');
-	}
+	return lines.join('\n');
 }

@@ -8,10 +8,7 @@ import {
 	Setting,
 	requestUrl,
 } from 'obsidian';
-import {
-	OpenAlephInstanceSettings,
-	OpenAlephPluginSettings,
-} from './types';
+import { OpenAlephInstanceSettings, OpenAlephPluginSettings } from './types';
 import OpenAlephPlugin from './main';
 
 export const DEFAULT_INSTANCE: Omit<OpenAlephInstanceSettings, 'id'> = {
@@ -23,7 +20,6 @@ export const DEFAULT_INSTANCE: Omit<OpenAlephInstanceSettings, 'id'> = {
 };
 
 export const DEFAULT_SETTINGS: OpenAlephPluginSettings = {
-	importFolder: 'followthemarkdown',
 	instances: [],
 };
 
@@ -44,22 +40,6 @@ export class OpenAlephSettingTab extends PluginSettingTab {
 		containerEl.empty();
 
 		new Setting(containerEl).setName('Configure instances.').setHeading();
-
-		new Setting(containerEl)
-			.setName('FollowTheMoney entity folder')
-			.setDesc(
-				'Importing a FollowTheMoney entity from an OpenAleph instance will save it here, as a Markdown note.',
-			)
-			.addText((text) =>
-				text
-					.setPlaceholder('followthemarkdown')
-					.setValue(this.plugin.settings.importFolder)
-					.onChange(async (value) => {
-						this.plugin.settings.importFolder =
-							value || 'followthemarkdown';
-						await this.plugin.saveSettings();
-					}),
-			);
 
 		containerEl.createEl('p', {
 			text: 'Add the domain URL and API key for OpenAleph instances, in order to allow Obsidian to search scross them simultaneously.',

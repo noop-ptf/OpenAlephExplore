@@ -51,7 +51,6 @@ export interface OpenAlephGroupedEntities {
 }
 
 export interface OpenAlephPluginSettings {
-	importFolder: string;
 	instances: OpenAlephInstanceSettings[];
 }
 
@@ -62,4 +61,11 @@ export interface OpenAlephInstanceSettings {
 	apiKeyName: string;
 	enabled: boolean;
 	connectionValid: boolean;
+}
+
+export interface ExplorationRecord {
+	uuid: string;
+	folderPath: string;
+	jsonPath: string;
+	tablePath: string;
 }

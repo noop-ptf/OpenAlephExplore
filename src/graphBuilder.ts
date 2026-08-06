@@ -114,7 +114,8 @@ function getCssVar(name: string, fallback: string): string {
 		return fallback;
 	}
 
-	const probe = document.createSpan();
+	// eslint-disable-next-line obsidianmd/prefer-create-el -- document.createSpan() internally tries to do the equivalent of document.appendChild(newSpanElement) the browser throws a native DOM error
+	const probe = document.createElement('span');
 	probe.style.color = `var(${name})`;
 	document.body.appendChild(probe);
 	const resolved = getComputedStyle(probe).color;

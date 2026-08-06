@@ -1,6 +1,6 @@
 /* eslint-disable obsidianmd/ui/sentence-case -- This is all valid sentence case */
 
-import { App, Plugin, Notice, MarkdownView, requestUrl } from 'obsidian';
+import { App, Plugin, Notice, MarkdownView, TFile, requestUrl } from 'obsidian';
 import { DEFAULT_SETTINGS, OpenAlephSettingTab } from './settings';
 import {
 	OpenAlephPluginSettings,
@@ -12,7 +12,12 @@ import {
 } from './types';
 import { ConfirmNoteModal, LoadingModal } from './modals';
 import { EntityGraphView, VIEW_TYPE_ENTITY_GRAPH } from './graphView';
-import { buildMarkdownTable } from './tableBuilder';
+import {
+	saveExploration,
+	linkNoteToExploration,
+	openTableFile,
+	loadExplorationJson,
+} from './storage';
 
 export default class OpenAlephPlugin extends Plugin {
 	settings!: OpenAlephPluginSettings;
@@ -23,15 +28,18 @@ export default class OpenAlephPlugin extends Plugin {
 			(leaf) => new EntityGraphView(leaf),
 		);
 
-		// this.addCommand({
-		// 	id: 'open-aleph-explore',
-		// 	name: 'OpenAleph Explore',
-		// 	callback: () => {
-		// 		// store entities for a note on disk?
-		// 		// figure out where to get them before using this
-		// 		void this.activateView(entities);
-		// 	},
-		// });
+		this.registerObsidianProtocolHandler('openaleph-graph', (params) => {
+			const uuid = params.uuid;
+			if (!uuid) {
+				new Notice('Missing exploration ID in link.');
+				return;
+			}
+			this.openGraphForUuid(uuid).catch((err: unknown) => {
+				const message =
+					err instanceof Error ? err.message : String(err);
+				new Notice(message);
+			});
+		});
 
 		await this.loadSettings();
 
@@ -65,29 +73,71 @@ export default class OpenAlephPlugin extends Plugin {
 			throw new Error('No note is currently open.');
 		}
 
+		const noteFile = view.file;
+		if (!noteFile) {
+			throw new Error('No note is currently open.');
+		}
+
 		const noteName = view.file?.basename ?? 'Untitled';
 		const content = view.editor.getValue();
 
 		new ConfirmNoteModal(this.app, noteName, content, () => {
-			// TODO loading animation in the modal until the results come in
-			void this.handleExplore(content, noteName);
+			void this.handleExplore(content, noteName, noteFile);
 		}).open();
 	}
 
 	private async handleExplore(
 		content: string,
 		noteName: string,
+		noteFile: TFile,
 	): Promise<void> {
 		const loadingModal = new LoadingModal(this.app);
 		loadingModal.open();
 
 		try {
-			await explore(this.settings, this.app, content, noteName);
+			const entities = await explore(
+				this.settings,
+				this.app,
+				content,
+				noteName,
+			);
+
+			const record = await saveExploration(this.app, entities);
+			await linkNoteToExploration(this.app, noteFile, record);
+			await openTableFile(this.app, record);
 		} catch (err: unknown) {
 			const message = err instanceof Error ? err.message : String(err);
 			new Notice(message);
 		} finally {
 			loadingModal.close();
+		}
+	}
+
+	private async openGraphForUuid(uuid: string): Promise<void> {
+		const entities = await loadExplorationJson(this.app, uuid);
+
+		if (!entities) {
+			new Notice('Could not find exploration data for this graph.');
+			return;
+		}
+
+		const existing = this.app.workspace.getLeavesOfType(
+			VIEW_TYPE_ENTITY_GRAPH,
+		);
+		const leaf = existing[0] ?? this.app.workspace.getLeaf('tab');
+
+		if (existing.length === 0) {
+			await leaf.setViewState({
+				type: VIEW_TYPE_ENTITY_GRAPH,
+				active: true,
+			});
+		}
+
+		await this.app.workspace.revealLeaf(leaf);
+
+		const view = leaf.view;
+		if (view instanceof EntityGraphView) {
+			view.setEntities(entities);
 		}
 	}
 
@@ -167,7 +217,7 @@ async function explore(
 	app: App,
 	content: string,
 	noteName: string,
-) {
+): Promise<OpenAlephGraph> {
 	const enabledInstances = settings.instances?.filter(
 		(instance) => instance.enabled,
 	);
@@ -251,23 +301,7 @@ async function explore(
 		}
 	}
 
-	await buildMarkdownTable(entities, app);
-
-	// graphing
-
-	// const existing = workspace.getLeavesOfType(VIEW_TYPE_ENTITY_GRAPH);
-	// const leaf: WorkspaceLeaf = existing[0] ?? workspace.getLeaf('tab');
-
-	// if (existing.length === 0) {
-	// 	await leaf.setViewState({ type: VIEW_TYPE_ENTITY_GRAPH, active: true });
-	// }
-
-	// workspace.revealLeaf(leaf);
-
-	// const view = leaf.view;
-	// if (view instanceof EntityGraphView) {
-	// 	view.setEntities(entities);
-	// }
+	return entities;
 }
 
 /* eslint-enable obsidianmd/ui/sentence-case -- Done with weird sentnces */
