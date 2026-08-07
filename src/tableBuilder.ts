@@ -31,23 +31,28 @@ export function buildMarkdownTableContent(entities: OpenAlephGraph): string {
 	];
 
 	const groupedEntities = groupEntitiesByInstance(entities);
+	console.log(groupedEntities);
 
 	for (const entitiesGroupedByInstance of groupedEntities) {
 		let addedInstanceRow = false;
 		for (const relatedEntity of entitiesGroupedByInstance.relatedEntities ??
 			[]) {
+			console.log(relatedEntity.caption);
 			const modifiedUrl = relatedEntity.url.replace('/api/2', '');
-			if (!relatedEntity.closelyCorrelated) {
+			let addedEntityName = false;
+			if (relatedEntity.closelyCorrelated.length == 0) {
 				lines.push(
-					`| ${addedInstanceRow ? '' : `[${relatedEntity.instanceName}](${relatedEntity.instance})`} | ${relatedEntity.schema} | [${relatedEntity.caption}](${modifiedUrl}) |`,
+					`| ${addedInstanceRow ? '' : `[${relatedEntity.instanceName}](${relatedEntity.instance})`} | ${addedEntityName ? '' : relatedEntity.schema} | ${addedEntityName ? '' : `[${relatedEntity.caption}](${modifiedUrl})`}  |`,
 				);
 				addedInstanceRow = true;
+				addedEntityName = true;
 			} else {
 				for (const closelyCorrelated of relatedEntity.closelyCorrelated) {
 					lines.push(
-						`| ${addedInstanceRow ? '' : `[${relatedEntity.instanceName}](${relatedEntity.instance})`} | ${relatedEntity.schema} | [${relatedEntity.caption}](${modifiedUrl}) | [${closelyCorrelated.label}](${closelyCorrelated.searchQuery}) |`,
+						`| ${addedInstanceRow ? '' : `[${relatedEntity.instanceName}](${relatedEntity.instance})`} | ${addedEntityName ? '' : relatedEntity.schema} | ${addedEntityName ? '' : `[${relatedEntity.caption}](${modifiedUrl})`} | [${closelyCorrelated.label}](${closelyCorrelated.searchQuery}) |`,
 					);
 					addedInstanceRow = true;
+					addedEntityName = true;
 				}
 			}
 		}

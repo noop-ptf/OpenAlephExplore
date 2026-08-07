@@ -11,7 +11,7 @@ export interface OpenAlephEntity {
 	instance: string;
 	instanceName: string;
 	url: string;
-	closelyCorrelated?: OpenAlephCloselyCorrelatedApiTerm[];
+	closelyCorrelated: OpenAlephCloselyCorrelatedApiTerm[];
 }
 
 export interface OpenAlephCloselyCorrelatedApiResult {
