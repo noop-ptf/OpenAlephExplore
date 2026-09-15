@@ -1,5 +1,5 @@
 {
-	"name": "obsidian-openaleph-explore",
+	"name": "openaleph-explore",
 	"version": "1.0.0",
 	"description": "OpenAleph Explore turns your notes into contextual, structured data, by querying OpenAleph instances.",
 	"main": "main.js",
