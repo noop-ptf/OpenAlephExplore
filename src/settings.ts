@@ -6,6 +6,8 @@ import {
 	PluginSettingTab,
 	SecretComponent,
 	Setting,
+	SettingPage,
+	SettingDefinitionItem,
 	requestUrl,
 } from 'obsidian';
 import { OpenAlephInstanceSettings, OpenAlephPluginSettings } from './types';
@@ -23,46 +25,13 @@ export const DEFAULT_SETTINGS: OpenAlephPluginSettings = {
 	instances: [],
 };
 
-// TODO: Migrate to https://docs.obsidian.md/plugins/guides/migrate-declarative-settings at some point.
-//
-// eslint-disable-next-line obsidianmd/settings-tab/prefer-setting-definitions -- We don't want to migrate now.
-export class OpenAlephSettingTab extends PluginSettingTab {
-	plugin: OpenAlephPlugin;
-
-	constructor(app: App, plugin: OpenAlephPlugin) {
-		super(app, plugin);
-		this.plugin = plugin;
-	}
-
-	display(): void {
-		const { containerEl } = this;
-
-		containerEl.empty();
-
-		new Setting(containerEl).setName('Configure instances.').setHeading();
-
-		containerEl.createEl('p', {
-			text: 'Add the domain URL and API key for OpenAleph instances, in order to allow Obsidian to search scross them simultaneously.',
-		});
-
-		this.plugin.settings.instances.forEach((instance, index) => {
-			this.renderInstance(containerEl, instance, index);
-		});
-
-		new Setting(containerEl).addButton((btn) =>
-			btn
-				.setButtonText('Add instance')
-				.setCta()
-				.onClick(async () => {
-					const instance: OpenAlephInstanceSettings = {
-						...DEFAULT_INSTANCE,
-						id: crypto.randomUUID(),
-					};
-					this.plugin.settings.instances.push(instance);
-					await this.plugin.saveSettings();
-					this.display();
-				}),
-		);
+class InstancesPage extends SettingPage {
+	constructor(
+		private plugin: OpenAlephPlugin,
+		private app: App,
+	) {
+		super();
+		this.title = 'Instance Configuration';
 	}
 
 	private renderInstance(
@@ -70,7 +39,9 @@ export class OpenAlephSettingTab extends PluginSettingTab {
 		instance: OpenAlephInstanceSettings,
 		index: number,
 	): void {
-		const box = containerEl.createDiv({ cls: 'openaleph-source-box' });
+		const box = containerEl.createDiv({
+			cls: 'openaleph-source-box',
+		});
 
 		new Setting(box)
 			.setName(instance.name || `Instance ${index + 1}`)
@@ -169,6 +140,64 @@ export class OpenAlephSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				}),
 		);
+	}
+
+	display() {
+		let containerEl = this.containerEl;
+		containerEl.empty();
+
+		containerEl.createEl('p', {
+			text: 'Add the domain URL and API key for OpenAleph instances, in order to allow Obsidian to search across them simultaneously.',
+		});
+
+		this.plugin.settings.instances.forEach((instance, index) => {
+			this.renderInstance(containerEl, instance, index);
+		});
+
+		new Setting(containerEl).addButton((btn) =>
+			btn
+				.setButtonText('Add instance')
+				.setCta()
+				.onClick(async () => {
+					const instance: OpenAlephInstanceSettings = {
+						...DEFAULT_INSTANCE,
+						id: crypto.randomUUID(),
+					};
+					this.plugin.settings.instances.push(instance);
+					await this.plugin.saveSettings();
+					this.display();
+				}),
+		);
+	}
+}
+
+export class OpenAlephSettingTab extends PluginSettingTab {
+	plugin: OpenAlephPlugin;
+
+	constructor(app: App, plugin: OpenAlephPlugin) {
+		super(app, plugin);
+		this.plugin = plugin;
+	}
+
+	// 1.13.0+: Obsidian calls this and skips display().
+	// Controls auto-bind to this.plugin.settings[key].
+	getSettingDefinitions(): SettingDefinitionItem[] {
+		return [
+			{
+				name: 'FollowTheMoney entity folder',
+				desc: 'Importing a FollowTheMoney entity from an OpenAleph instance will save it here, as a Markdown note.',
+				control: {
+					type: 'text',
+					key: 'importFolder',
+					placeholder: 'followthemarkdown',
+				},
+			},
+			{
+				type: 'page',
+				name: 'Instance Configuration',
+				page: () => new InstancesPage(this.plugin, this.app),
+			},
+		];
 	}
 }
 
