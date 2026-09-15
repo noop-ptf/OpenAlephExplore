@@ -46,7 +46,7 @@ export default class OpenAlephPlugin extends Plugin {
 		this.addSettingTab(new OpenAlephSettingTab(this.app, this));
 
 		this.addRibbonIcon(
-			'binoculars',
+			'telescope',
 			'OpenAleph Explore',
 			(_evt: MouseEvent) => {
 				this.activateView().catch((err: unknown) => {

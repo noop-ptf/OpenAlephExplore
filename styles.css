@@ -50,6 +50,7 @@
     width: 100%;
 }
 
+/* TODO - unify the spin animation CSS between this & settings */
 .openaleph-loading-modal {
     display: flex;
     flex-direction: column;
