@@ -1,7 +1,8 @@
-import { ItemView, WorkspaceLeaf, Notice } from 'obsidian';
+import { ItemView, WorkspaceLeaf, Notice, ViewStateResult } from 'obsidian';
 import cytoscape from 'cytoscape';
 import type { OpenAlephGraph } from './types';
 import { buildCytoscapeElements, buildStylesheet } from './graphBuilder';
+import { loadExplorationJson } from './storage';
 
 export const VIEW_TYPE_ENTITY_GRAPH = 'entity-graph-view';
 
@@ -9,9 +10,37 @@ export class EntityGraphView extends ItemView {
 	private cy: cytoscape.Core | null = null;
 	private graphContainerEl: HTMLElement | null = null;
 	private entities: OpenAlephGraph | null = null;
+	private uuid: string | null = null;
 
 	constructor(leaf: WorkspaceLeaf) {
 		super(leaf);
+	}
+
+	getState(): Record<string, unknown> {
+		return { ...super.getState(), uuid: this.uuid };
+	}
+
+	async setState(state: unknown, result: ViewStateResult): Promise<void> {
+		await super.setState(state, result);
+
+		const uuid =
+			typeof state === 'object' && state !== null && 'uuid' in state
+				? (state as { uuid?: unknown }).uuid
+				: undefined;
+
+		if (typeof uuid !== 'string' || uuid === this.uuid) {
+			return;
+		}
+
+		this.uuid = uuid;
+		this.entities = await loadExplorationJson(this.app, uuid);
+
+		if (!this.entities) {
+			new Notice('Could not find exploration data for this graph.');
+			return;
+		}
+
+		this.renderGraph();
 	}
 
 	getViewType(): string {
@@ -27,41 +56,13 @@ export class EntityGraphView extends ItemView {
 	}
 
 	async onOpen(): Promise<void> {
-		const container = this.contentEl;
-		container.empty();
-		container.addClass('openaleph-entity-graph-view-container');
+		this.contentEl.empty();
+		this.contentEl.addClass('openaleph-entity-graph-view-container');
 
-		this.graphContainerEl = container.createDiv({
+		this.graphContainerEl = this.contentEl.createDiv({
 			cls: 'openaleph-entity-graph-cy-container',
 		});
 
-		this.createCy();
-
-		if (this.entities) {
-			this.renderGraph();
-		}
-	}
-
-	async onClose(): Promise<void> {
-		this.cy?.destroy();
-		this.cy = null;
-	}
-
-	setEntities(entities: OpenAlephGraph): void {
-		this.entities = entities;
-
-		// Update the tab title to reflect the new central note.
-		void this.leaf.setViewState({
-			type: VIEW_TYPE_ENTITY_GRAPH,
-			active: true,
-		});
-
-		if (this.graphContainerEl && this.cy) {
-			this.renderGraph();
-		}
-	}
-
-	createCy() {
 		this.cy = cytoscape({
 			container: this.graphContainerEl,
 			elements: [],
@@ -74,45 +75,44 @@ export class EntityGraphView extends ItemView {
 			}),
 		);
 
-		// TODO add related + correlated search URL
-		// copy to clipboard instead of accessing
-		// this.cy.on('tap', 'node[url]', (evt) => {
-		// 	const url = evt.target.data('url') as string | undefined;
-		// 	if (url) {
-		// 		window.open(url, '_blank');
-		// 	}
-		// });
+		if (this.entities) {
+			this.renderGraph();
+		}
+	}
+
+	async onClose(): Promise<void> {
+		this.cy?.destroy();
+		this.cy = null;
+		this.graphContainerEl = null;
+	}
+
+	onResize(): void {
+		this.cy?.resize();
+		this.cy?.fit(undefined, 30);
 	}
 
 	private renderGraph(): void {
-		if (!this.graphContainerEl) {
+		const { cy, entities } = this;
+
+		if (!cy || !entities) {
 			return;
 		}
 
-		this.createCy();
+		cy.batch(() => {
+			cy.elements().remove();
+			cy.add(buildCytoscapeElements(entities));
+		});
 
-		if (!this.cy || !this.entities) {
-			new Notice('Failed to render graph');
-			return;
-		}
+		cy.layout({
+			name: 'concentric',
+			concentric: (node: cytoscape.NodeSingular) =>
+				100 - (node.data('depth') as number) * 10,
+			levelWidth: () => 1,
+			minNodeSpacing: 40,
+			startAngle: (3 / 2) * Math.PI,
+			animate: false,
+		}).run();
 
-		const elements = buildCytoscapeElements(this.entities);
-
-		this.cy.elements().remove();
-		this.cy.add(elements);
-
-		this.cy
-			.layout({
-				name: 'concentric',
-				concentric: (node: cytoscape.NodeSingular) =>
-					100 - (node.data('depth') as number) * 10,
-				levelWidth: () => 1,
-				minNodeSpacing: 40,
-				startAngle: (3 / 2) * Math.PI,
-				animate: false,
-			})
-			.run();
-
-		this.cy.fit(undefined, 30);
+		cy.fit(undefined, 30);
 	}
 }

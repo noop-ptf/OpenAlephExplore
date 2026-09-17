@@ -16,7 +16,6 @@ import {
 	saveExploration,
 	linkNoteToExploration,
 	openTableFile,
-	loadExplorationJson,
 } from './storage';
 
 export default class OpenAlephPlugin extends Plugin {
@@ -78,7 +77,7 @@ export default class OpenAlephPlugin extends Plugin {
 			throw new Error('No note is currently open.');
 		}
 
-		const noteName = view.file?.basename ?? 'Untitled';
+		const noteName = noteFile.basename;
 		const content = view.editor.getValue();
 
 		new ConfirmNoteModal(this.app, noteName, content, () => {
@@ -114,13 +113,6 @@ export default class OpenAlephPlugin extends Plugin {
 	}
 
 	private async openGraphForUuid(uuid: string): Promise<void> {
-		const entities = await loadExplorationJson(this.app, uuid);
-
-		if (!entities) {
-			new Notice('Could not find exploration data for this graph.');
-			return;
-		}
-
 		const existing = this.app.workspace.getLeavesOfType(
 			VIEW_TYPE_ENTITY_GRAPH,
 		);
@@ -130,15 +122,11 @@ export default class OpenAlephPlugin extends Plugin {
 			await leaf.setViewState({
 				type: VIEW_TYPE_ENTITY_GRAPH,
 				active: true,
+				state: { uuid },
 			});
 		}
 
 		await this.app.workspace.revealLeaf(leaf);
-
-		const view = leaf.view;
-		if (view instanceof EntityGraphView) {
-			view.setEntities(entities);
-		}
 	}
 
 	async saveSettings() {
@@ -163,7 +151,7 @@ async function percolate(
 		instanceUrl,
 	);
 
-	let headers: Record<string, string> = {
+	const headers: Record<string, string> = {
 		'User-Agent': 'alephclient',
 		Authorization: apiKey,
 		// Pragma: 'no-cache',
@@ -176,10 +164,6 @@ async function percolate(
 		headers,
 		body: JSON.stringify({ text: bodyText }),
 	});
-
-	if (res.status < 200 || res.status >= 300) {
-		throw new Error(`HTTP ${res.status} from ${firstUrl.toString()}`);
-	}
 
 	const firstRes = res.json as unknown as OpenAlephPercolationApiResult;
 
@@ -202,12 +186,6 @@ async function percolate(
 				headers,
 				body: JSON.stringify({ text: bodyText }),
 			});
-
-			if (res.status < 200 || res.status >= 300) {
-				throw new Error(
-					`HTTP ${res.status} from ${nextUrl.toString()}`,
-				);
-			}
 
 			const nextRes =
 				res.json as unknown as OpenAlephPercolationApiResult;
@@ -246,12 +224,12 @@ async function getCloselyCorrelated(
 		maxResults = 20;
 	}
 
-	const url = new URL(
-		`/api/2/entities?facet_significant=names&limit=${maxResults}&q=${caption}`,
-		instanceUrl,
-	);
+	const url = new URL('/api/2/entities', instanceUrl);
+	url.searchParams.set('facet_significant', 'names');
+	url.searchParams.set('limit', String(maxResults));
+	url.searchParams.set('q', caption);
 
-	let headers: Record<string, string> = {
+	const headers: Record<string, string> = {
 		'User-Agent': 'alephclient',
 		Authorization: apiKey,
 		// Pragma: 'no-cache',
@@ -275,7 +253,7 @@ async function explore(
 	content: string,
 	noteName: string,
 ): Promise<OpenAlephGraph> {
-	const enabledInstances = settings.instances?.filter(
+	const enabledInstances = settings.instances.filter(
 		(instance) => instance.enabled,
 	);
 
@@ -298,8 +276,8 @@ async function explore(
 				continue;
 			}
 
-			entities.relatedEntities?.push(
-				...relatedEntities.results.flatMap((entity: unknown) => {
+			const newRelatedEntities = relatedEntities.results.flatMap(
+				(entity: unknown) => {
 					if (typeof entity !== 'object' || entity === null) {
 						console.warn(
 							'Skipping malformed entity:',
@@ -322,15 +300,12 @@ async function explore(
 						url: e.links.self,
 						closelyCorrelated: [],
 					};
-				}),
+				},
 			);
 
-			// get closely correlated terms
-			const relatedEntitiesPerInstance = entities.relatedEntities?.filter(
-				(entity) => entity.instanceUrl === enabledInstance.instanceUrl,
-			);
+			entities.relatedEntities?.push(...newRelatedEntities);
 
-			for (let relatedEntity of relatedEntitiesPerInstance ?? []) {
+			for (let relatedEntity of newRelatedEntities ?? []) {
 				const closelyCorrelatedTerms = await getCloselyCorrelated(
 					enabledInstance.instanceUrl,
 					apiKey,

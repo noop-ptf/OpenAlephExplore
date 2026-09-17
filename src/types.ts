@@ -55,6 +55,7 @@ export interface OpenAlephGroupedEntities {
 }
 
 export interface OpenAlephPluginSettings {
+	importFolder: string;
 	instances: OpenAlephInstanceSettings[];
 }
 

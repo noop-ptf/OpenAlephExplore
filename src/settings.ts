@@ -22,6 +22,7 @@ export const DEFAULT_INSTANCE: Omit<OpenAlephInstanceSettings, 'id'> = {
 };
 
 export const DEFAULT_SETTINGS: OpenAlephPluginSettings = {
+	importFolder: 'followthemarkdown',
 	instances: [],
 };
 
@@ -129,6 +130,7 @@ class InstancesPage extends SettingPage {
 				.onChange(async (value) => {
 					instance.instanceUrl = value;
 					await this.plugin.saveSettings();
+					instance.connectionValid = false;
 				}),
 		);
 
@@ -138,6 +140,7 @@ class InstancesPage extends SettingPage {
 				.onChange(async (value) => {
 					instance.apiKeyName = value;
 					await this.plugin.saveSettings();
+					instance.connectionValid = false;
 				}),
 		);
 	}
@@ -203,7 +206,7 @@ export class OpenAlephSettingTab extends PluginSettingTab {
 
 async function canConnect(instanceUrl: string, apiKey: string | null) {
 	const url = new URL('/api/2/status', instanceUrl);
-	let headers: Record<string, string> = {
+	const headers: Record<string, string> = {
 		'User-Agent': 'alephclient',
 		Pragma: 'no-cache',
 	};

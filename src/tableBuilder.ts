@@ -38,7 +38,7 @@ export function buildMarkdownTableContent(entities: OpenAlephGraph): string {
 			[]) {
 			const modifiedUrl = relatedEntity.url.replace('/api/2', '');
 			let addedEntityName = false;
-			if (relatedEntity.closelyCorrelated.length == 0) {
+			if (relatedEntity.closelyCorrelated.length === 0) {
 				lines.push(
 					`| ${addedInstanceRow ? '' : `[${relatedEntity.instanceName}](${relatedEntity.instance})`} | ${addedEntityName ? '' : relatedEntity.schema} | ${addedEntityName ? '' : `[${relatedEntity.caption}](${modifiedUrl})`}  |  |`,
 				);
