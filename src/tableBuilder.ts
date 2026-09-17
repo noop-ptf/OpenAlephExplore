@@ -31,13 +31,11 @@ export function buildMarkdownTableContent(entities: OpenAlephGraph): string {
 	];
 
 	const groupedEntities = groupEntitiesByInstance(entities);
-	console.log(groupedEntities);
 
 	for (const entitiesGroupedByInstance of groupedEntities) {
 		let addedInstanceRow = false;
 		for (const relatedEntity of entitiesGroupedByInstance.relatedEntities ??
 			[]) {
-			console.log(relatedEntity.caption);
 			const modifiedUrl = relatedEntity.url.replace('/api/2', '');
 			let addedEntityName = false;
 			if (relatedEntity.closelyCorrelated.length == 0) {

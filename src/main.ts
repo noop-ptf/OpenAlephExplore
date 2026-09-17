@@ -158,7 +158,11 @@ async function percolate(
 		throw new Error(`API key for ${instanceUrl} is empty.`);
 	}
 
-	const url = new URL('/api/2/beta/percolate?dehydrate=true', instanceUrl);
+	const firstUrl = new URL(
+		'/api/2/beta/percolate?dehydrate=true',
+		instanceUrl,
+	);
+
 	let headers: Record<string, string> = {
 		'User-Agent': 'alephclient',
 		Authorization: apiKey,
@@ -166,16 +170,66 @@ async function percolate(
 	};
 
 	const res = await requestUrl({
-		url: url.toString(),
+		url: firstUrl.toString(),
 		method: 'POST',
 		contentType: 'application/json',
 		headers,
 		body: JSON.stringify({ text: bodyText }),
 	});
 
-	// TS throws if the body isn't valid JSON
-	const body = res.json as unknown;
-	return body as OpenAlephPercolationApiResult;
+	if (res.status < 200 || res.status >= 300) {
+		throw new Error(`HTTP ${res.status} from ${firstUrl.toString()}`);
+	}
+
+	const firstRes = res.json as unknown as OpenAlephPercolationApiResult;
+
+	if (firstRes.status !== 'ok') {
+		return { ...firstRes, complete: true };
+	}
+
+	const results = [...firstRes.results];
+	let next = firstRes.next;
+	let error: unknown;
+
+	while (next) {
+		try {
+			const nextUrl = new URL(next, instanceUrl);
+
+			const res = await requestUrl({
+				url: nextUrl.toString(),
+				method: 'POST',
+				contentType: 'application/json',
+				headers,
+				body: JSON.stringify({ text: bodyText }),
+			});
+
+			if (res.status < 200 || res.status >= 300) {
+				throw new Error(
+					`HTTP ${res.status} from ${nextUrl.toString()}`,
+				);
+			}
+
+			const nextRes =
+				res.json as unknown as OpenAlephPercolationApiResult;
+
+			results.push(...nextRes.results);
+			next = nextRes.next;
+		} catch (e) {
+			console.warn(
+				`Percolation pagination for ${instanceUrl} stopped early:`,
+				e,
+			);
+			error = e;
+			break;
+		}
+	}
+
+	return {
+		...firstRes,
+		results,
+		complete: error === undefined,
+		error,
+	};
 }
 
 async function getCloselyCorrelated(
@@ -188,7 +242,7 @@ async function getCloselyCorrelated(
 		throw new Error(`API key for ${instanceUrl} is empty.`);
 	}
 	if (!maxResults) {
-		maxResults = 5;
+		maxResults = 20;
 	}
 	const url = new URL(
 		`/api/2/entities?facet_significant=names&limit=${maxResults}&q=${caption}`,
@@ -230,6 +284,7 @@ async function explore(
 	for (let enabledInstance of enabledInstances) {
 		const apiKey = app.secretStorage.getSecret(enabledInstance.apiKeyName);
 		try {
+			// get related entities
 			const relatedEntities = await percolate(
 				enabledInstance.instanceUrl,
 				apiKey,
@@ -241,9 +296,16 @@ async function explore(
 			}
 
 			entities.relatedEntities?.push(
-				...relatedEntities.results.map((entity: unknown) => {
+				...relatedEntities.results.flatMap((entity: unknown) => {
 					if (typeof entity !== 'object' || entity === null) {
-						throw new Error('Malformed entity in response.');
+						console.warn(
+							'Skipping malformed entity:',
+							entity,
+							'(',
+							enabledInstance.instanceUrl,
+							')',
+						);
+						return [];
 					}
 					const e = entity as OpenAlephPercolationApiEntity;
 					return {
@@ -253,12 +315,14 @@ async function explore(
 						id: e.id,
 						instance: enabledInstance.instanceUrl,
 						instanceName: enabledInstance.name,
+						instanceUrl: enabledInstance.instanceUrl,
 						url: e.links.self,
 						closelyCorrelated: [],
 					};
 				}),
 			);
 
+			// get closely correlated terms
 			for (let relatedEntity of entities.relatedEntities ?? []) {
 				const closelyCorrelatedTerms = await getCloselyCorrelated(
 					enabledInstance.instanceUrl,

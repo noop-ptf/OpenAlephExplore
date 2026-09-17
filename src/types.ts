@@ -10,6 +10,7 @@ export interface OpenAlephEntity {
 	id: string;
 	instance: string;
 	instanceName: string;
+	instanceUrl: string;
 	url: string;
 	closelyCorrelated: OpenAlephCloselyCorrelatedApiTerm[];
 }
@@ -33,6 +34,9 @@ export interface OpenAlephCloselyCorrelatedApiTerm {
 export interface OpenAlephPercolationApiResult {
 	status: string;
 	results: OpenAlephPercolationApiEntity[];
+	next?: string | null;
+	complete: boolean;
+	error?: unknown;
 }
 
 export interface OpenAlephPercolationApiEntity {
