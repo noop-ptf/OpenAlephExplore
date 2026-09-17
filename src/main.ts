@@ -241,13 +241,16 @@ async function getCloselyCorrelated(
 	if (!apiKey || apiKey.trim() === '') {
 		throw new Error(`API key for ${instanceUrl} is empty.`);
 	}
+
 	if (!maxResults) {
 		maxResults = 20;
 	}
+
 	const url = new URL(
 		`/api/2/entities?facet_significant=names&limit=${maxResults}&q=${caption}`,
 		instanceUrl,
 	);
+
 	let headers: Record<string, string> = {
 		'User-Agent': 'alephclient',
 		Authorization: apiKey,
@@ -276,7 +279,7 @@ async function explore(
 		(instance) => instance.enabled,
 	);
 
-	let entities: OpenAlephGraph = {
+	const entities: OpenAlephGraph = {
 		centralNote: noteName,
 		relatedEntities: [],
 	};
@@ -323,7 +326,11 @@ async function explore(
 			);
 
 			// get closely correlated terms
-			for (let relatedEntity of entities.relatedEntities ?? []) {
+			const relatedEntitiesPerInstance = entities.relatedEntities?.filter(
+				(entity) => entity.instanceUrl === enabledInstance.instanceUrl,
+			);
+
+			for (let relatedEntity of relatedEntitiesPerInstance ?? []) {
 				const closelyCorrelatedTerms = await getCloselyCorrelated(
 					enabledInstance.instanceUrl,
 					apiKey,
@@ -340,9 +347,16 @@ async function explore(
 						closelyCorrelatedTerms.facets?.[
 							'names.significant_terms'
 						]?.values ?? []
-					).map((value: unknown) => {
+					).flatMap((value: unknown) => {
 						if (typeof value !== 'object' || value === null) {
-							throw new Error('Malformed entity in response.');
+							console.warn(
+								'Skipping malformed closely correlated term:',
+								value,
+								'(',
+								enabledInstance.instanceUrl,
+								')',
+							);
+							return [];
 						}
 						const v = value as OpenAlephCloselyCorrelatedApiTerm;
 						const relatedEntityCaptionAsQuery =
