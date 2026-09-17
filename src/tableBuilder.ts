@@ -40,7 +40,7 @@ export function buildMarkdownTableContent(entities: OpenAlephGraph): string {
 			let addedEntityName = false;
 			if (relatedEntity.closelyCorrelated.length == 0) {
 				lines.push(
-					`| ${addedInstanceRow ? '' : `[${relatedEntity.instanceName}](${relatedEntity.instance})`} | ${addedEntityName ? '' : relatedEntity.schema} | ${addedEntityName ? '' : `[${relatedEntity.caption}](${modifiedUrl})`}  |`,
+					`| ${addedInstanceRow ? '' : `[${relatedEntity.instanceName}](${relatedEntity.instance})`} | ${addedEntityName ? '' : relatedEntity.schema} | ${addedEntityName ? '' : `[${relatedEntity.caption}](${modifiedUrl})`}  |  |`,
 				);
 				addedInstanceRow = true;
 				addedEntityName = true;
