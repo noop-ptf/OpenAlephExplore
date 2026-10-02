@@ -34,6 +34,14 @@
     border-radius: 0.5rem;
 }
 
+.openaleph-max-entities-setting-container {
+    padding: 1em;
+}
+
+.openaleph-max-entities-setting .setting-item-name {
+    font-size: inherit;
+}
+
 .openaleph-note-preview {
     white-space: pre-wrap;
 }

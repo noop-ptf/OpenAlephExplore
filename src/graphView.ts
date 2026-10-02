@@ -1,8 +1,20 @@
-import { ItemView, WorkspaceLeaf, Notice, ViewStateResult } from 'obsidian';
+import {
+	ItemView,
+	WorkspaceLeaf,
+	Notice,
+	ViewStateResult,
+	Menu,
+} from 'obsidian';
 import cytoscape from 'cytoscape';
-import type { OpenAlephGraph } from './types';
+import fcose from 'cytoscape-fcose';
+import type OpenAlephPlugin from './main';
+import type { OpenAlephEntity, OpenAlephGraph } from './types';
 import { buildCytoscapeElements, buildStylesheet } from './graphBuilder';
 import { loadExplorationJson } from './storage';
+import { writeNote } from './noteImport';
+import { getEntity } from './requests';
+
+cytoscape.use(fcose);
 
 export const VIEW_TYPE_ENTITY_GRAPH = 'entity-graph-view';
 
@@ -12,7 +24,10 @@ export class EntityGraphView extends ItemView {
 	private entities: OpenAlephGraph | null = null;
 	private uuid: string | null = null;
 
-	constructor(leaf: WorkspaceLeaf) {
+	constructor(
+		leaf: WorkspaceLeaf,
+		private readonly plugin: OpenAlephPlugin,
+	) {
 		super(leaf);
 	}
 
@@ -69,6 +84,26 @@ export class EntityGraphView extends ItemView {
 			style: buildStylesheet(),
 		});
 
+		const cy = this.cy;
+
+		// tapping a node fades everything else
+		cy.on('tap', 'node', (evt) => {
+			cy.elements().addClass('faded');
+			const node = evt.target as cytoscape.NodeSingular;
+			node.closedNeighborhood().removeClass('faded');
+		});
+
+		// tapping the background reverts the fade
+		cy.on('tap', (evt) => {
+			if (evt.target === cy) {
+				cy.elements().removeClass('faded');
+			}
+		});
+
+		cy.on('cxttap', 'node[type="relatedEntity"]', (evt) => {
+			this.showRelatedEntityMenu(evt);
+		});
+
 		this.registerEvent(
 			this.app.workspace.on('css-change', () => {
 				this.cy?.style(buildStylesheet());
@@ -91,6 +126,65 @@ export class EntityGraphView extends ItemView {
 		this.cy?.fit(undefined, 30);
 	}
 
+	private showRelatedEntityMenu(evt: cytoscape.EventObject): void {
+		const node = evt.target as cytoscape.NodeSingular;
+		const nodeId = node.id();
+		const entity = this.entities?.relatedEntities?.find(
+			(related) => related.id === nodeId,
+		);
+
+		if (!entity) {
+			return;
+		}
+
+		const menu = new Menu();
+
+		menu.addItem((item) =>
+			item
+				.setTitle('Import into Obsidian')
+				.setIcon('download')
+				.onClick(() => {
+					void this.importEntity(entity);
+				}),
+		);
+
+		const original = evt.originalEvent;
+		if (original.instanceOf(MouseEvent)) {
+			menu.showAtMouseEvent(original);
+		} else if (this.graphContainerEl) {
+			const rect = this.graphContainerEl.getBoundingClientRect();
+			const pos = node.renderedPosition();
+			menu.showAtPosition({ x: rect.left + pos.x, y: rect.top + pos.y });
+		}
+	}
+
+	private async importEntity(entity: OpenAlephEntity): Promise<void> {
+		const instance = this.plugin.settings.instances.find(
+			(i) => i.instanceUrl === entity.instanceUrl,
+		);
+
+		if (!instance) {
+			new Notice(
+				`No configured instance for ${entity.instanceUrl}. Check the settings.`,
+			);
+			return;
+		}
+		try {
+			const fullEntity = await getEntity(entity.id, instance, this.app);
+			const instanceHostname = new URL(entity.instanceUrl).hostname;
+			await writeNote(
+				fullEntity,
+				this.plugin.settings.importFolder,
+				instanceHostname,
+				this.plugin,
+			);
+		} catch (e) {
+			const message = e instanceof Error ? e.message : String(e);
+			new Notice(`Importing entity ${entity.caption} failed: ${message}`);
+			return;
+		}
+	}
+
 	private renderGraph(): void {
 		const { cy, entities } = this;
 
@@ -104,14 +198,13 @@ export class EntityGraphView extends ItemView {
 		});
 
 		cy.layout({
-			name: 'concentric',
-			concentric: (node: cytoscape.NodeSingular) =>
-				100 - (node.data('depth') as number) * 10,
-			levelWidth: () => 1,
-			minNodeSpacing: 40,
-			startAngle: (3 / 2) * Math.PI,
+			name: 'fcose',
+			quality: 'proof',
 			animate: false,
-		}).run();
+			nodeRepulsion: 6500,
+			idealEdgeLength: 70,
+			nodeSeparation: 75,
+		} as cytoscape.LayoutOptions).run();
 
 		cy.fit(undefined, 30);
 	}

@@ -3,12 +3,50 @@ import type { OpenAlephGraph } from './types';
 
 export const CENTRAL_NODE_ID = '__central__';
 
+const INSTANCE_PALETTE: [cssVar: string, fallback: string][] = [
+	['--color-blue', '#61afef'],
+	['--color-green', '#98c379'],
+	['--color-purple', '#c678dd'],
+	['--color-red', '#e06c75'],
+	['--color-yellow', '#e5c07b'],
+	['--color-cyan', '#56b6c2'],
+	['--color-pink', '#ff79c6'],
+];
+
 export function buildCytoscapeElements(
 	entities: OpenAlephGraph,
 ): cytoscape.ElementDefinition[] {
-	// see lower TODO
-	const seenIds = new Set<string>();
+	const nodeIds = new Set<string>([CENTRAL_NODE_ID]);
+	const edgeIds = new Set<string>();
 	const elements: cytoscape.ElementDefinition[] = [];
+
+	const instanceColorIndex = new Map<string, number>();
+	const getColorIndex = (instance: string): number => {
+		let index = instanceColorIndex.get(instance);
+		if (index === undefined) {
+			index = instanceColorIndex.size % INSTANCE_PALETTE.length;
+			instanceColorIndex.set(instance, index);
+		}
+		return index;
+	};
+
+	const addNode = (data: { id: string; [key: string]: unknown }): boolean => {
+		if (nodeIds.has(data.id)) {
+			return false;
+		}
+		nodeIds.add(data.id);
+		elements.push({ data });
+		return true;
+	};
+
+	const addEdge = (source: string, target: string): void => {
+		const id = `${source}->${target}`;
+		if (source === target || edgeIds.has(id)) {
+			return;
+		}
+		edgeIds.add(id);
+		elements.push({ data: { id, source, target } });
+	};
 
 	elements.push({
 		data: {
@@ -24,67 +62,34 @@ export function buildCytoscapeElements(
 	}
 
 	for (const related of entities.relatedEntities) {
-		seenIds.add(related.id);
 		// RELATED = PERCOLATION
-		elements.push({
-			data: {
-				id: related.id,
-				label: related.caption,
-				depth: 1,
-				type: 'relatedEntity',
-				schema: related.schema,
-				url: related.url,
-			},
+		addNode({
+			id: related.id,
+			label: related.caption,
+			depth: 1,
+			type: 'relatedEntity',
+			schema: related.schema,
+			url: related.url,
+			instance: related.instance,
+			instanceName: related.instanceName,
+			colorIndex: getColorIndex(related.instance),
 		});
+		addEdge(CENTRAL_NODE_ID, related.id);
 
-		elements.push({
-			data: {
-				id: `${CENTRAL_NODE_ID}->${related.id}`,
-				source: CENTRAL_NODE_ID,
-				target: related.id,
-			},
-		});
+		// CORRELATED = CLOSELY CORRELATED
 
-		// TODO if a closelyCorrelated was already connected to another related
-		// add a connection (one closelyCorrelated can be connected to multiple related)
-		// maybe i can even highlight this as it would be interesting!
-
-		if (related.closelyCorrelated) {
-			// CORRELATED = CLOSELY CORRELATED
-			for (const term of related.closelyCorrelated) {
-				// nu ar trebui să existe
-				// CORRELATED -> nume chioare, RELATED -> FTM caption
-				// diferențiez FTM entities de nume chioare
-
-				// if (elements.some((el) => el.data.id === term.id)) {
-				// 	elements.push({
-				// 		data: {
-				// 			id: `${related.id}->${term.id}`,
-				// 			source: related.id,
-				// 			target: term.id,
-				// 		},
-				// 	});
-				// 	continue;
-				// }
-
-				elements.push({
-					data: {
-						id: term.id,
-						label: term.label,
-						depth: 2,
-						type: 'correlatedTerm',
-						count: term.count,
-					},
-				});
-
-				elements.push({
-					data: {
-						id: `${related.id}->${term.id}`,
-						source: related.id,
-						target: term.id,
-					},
-				});
-			}
+		for (const term of related.closelyCorrelated ?? []) {
+			// if the current closely correlated term already exists
+			// in the graph, connect it to the
+			// FTM entity (related obj) (percolation result)
+			addNode({
+				id: term.id,
+				label: term.label,
+				depth: 2,
+				type: 'correlatedTerm',
+				count: term.count,
+			});
+			addEdge(related.id, term.id);
 		}
 	}
 
@@ -139,12 +144,22 @@ export function buildStylesheet(): cytoscape.StylesheetJsonBlock[] {
 				label: 'data(label)',
 				'font-size': '10px',
 				color: textNormal,
+
 				'text-valign': 'bottom',
 				'text-halign': 'center',
 				'text-margin-y': 4,
+
+				// 'text-valign': 'center',
+				// 'text-halign': 'right',
+				// 'text-margin-x': 6,
+
 				'background-color': borderMuted,
 				width: 24,
 				height: 24,
+
+				'text-wrap': 'ellipsis',
+				'text-max-width': '120px',
+				'min-zoomed-font-size': 8,
 			},
 		},
 		{
@@ -165,6 +180,12 @@ export function buildStylesheet(): cytoscape.StylesheetJsonBlock[] {
 				height: 30,
 			},
 		},
+		...INSTANCE_PALETTE.map(
+			([cssVar, fallback], index): cytoscape.StylesheetJsonBlock => ({
+				selector: `node[type="relatedEntity"][colorIndex = ${index}]`,
+				style: { 'background-color': getCssVar(cssVar, fallback) },
+			}),
+		),
 		{
 			selector: 'node[type="correlatedTerm"]',
 			style: {
@@ -175,6 +196,14 @@ export function buildStylesheet(): cytoscape.StylesheetJsonBlock[] {
 				height: 'mapData(count, 0, 30, 8, 24)',
 				'font-size': '8px',
 			},
+		},
+		{
+			selector: 'node[type="correlatedTerm"][[degree > 1]]',
+			style: { 'border-width': 4, 'border-color': textAccent },
+		},
+		{
+			selector: 'node[type="relatedEntity"][[degree <= 1]]',
+			style: { width: 14, height: 14 },
 		},
 		{
 			selector: 'edge',
@@ -191,6 +220,10 @@ export function buildStylesheet(): cytoscape.StylesheetJsonBlock[] {
 				'border-width': 2,
 				'border-color': textAccent,
 			},
+		},
+		{
+			selector: '.faded',
+			style: { opacity: 0.15 },
 		},
 	];
 }

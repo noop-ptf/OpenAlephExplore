@@ -1,22 +1,16 @@
 /* eslint-disable obsidianmd/ui/sentence-case -- This is all valid sentence case */
 
-import { App, Plugin, Notice, MarkdownView, TFile, requestUrl } from 'obsidian';
+import { Plugin, Notice, MarkdownView, TFile } from 'obsidian';
 import { DEFAULT_SETTINGS, OpenAlephSettingTab } from './settings';
-import {
-	OpenAlephPluginSettings,
-	OpenAlephPercolationApiResult,
-	OpenAlephPercolationApiEntity,
-	OpenAlephGraph,
-	OpenAlephCloselyCorrelatedApiResult,
-	OpenAlephCloselyCorrelatedApiTerm,
-} from './types';
-import { ConfirmNoteModal, LoadingModal } from './modals';
+import { OpenAlephPluginSettings } from './types';
+import { ConfirmSendNoteModal, LoadingModal } from './modals';
 import { EntityGraphView, VIEW_TYPE_ENTITY_GRAPH } from './graphView';
 import {
 	saveExploration,
 	linkNoteToExploration,
 	openTableFile,
 } from './storage';
+import { explore } from './requests';
 
 export default class OpenAlephPlugin extends Plugin {
 	settings!: OpenAlephPluginSettings;
@@ -24,7 +18,7 @@ export default class OpenAlephPlugin extends Plugin {
 	async onload(): Promise<void> {
 		this.registerView(
 			VIEW_TYPE_ENTITY_GRAPH,
-			(leaf) => new EntityGraphView(leaf),
+			(leaf) => new EntityGraphView(leaf, this),
 		);
 
 		this.registerObsidianProtocolHandler('openaleph-graph', (params) => {
@@ -80,15 +74,26 @@ export default class OpenAlephPlugin extends Plugin {
 		const noteName = noteFile.basename;
 		const content = view.editor.getValue();
 
-		new ConfirmNoteModal(this.app, noteName, content, () => {
-			void this.handleExplore(content, noteName, noteFile);
-		}).open();
+		new ConfirmSendNoteModal(
+			this.app,
+			noteName,
+			content,
+			(maxPercolatedEntities) => {
+				void this.handleExplore(
+					content,
+					noteName,
+					noteFile,
+					maxPercolatedEntities,
+				);
+			},
+		).open();
 	}
 
 	private async handleExplore(
 		content: string,
 		noteName: string,
 		noteFile: TFile,
+		maxPercolatedEntities: number,
 	): Promise<void> {
 		const loadingModal = new LoadingModal(this.app);
 		loadingModal.open();
@@ -99,6 +104,7 @@ export default class OpenAlephPlugin extends Plugin {
 				this.app,
 				content,
 				noteName,
+				maxPercolatedEntities,
 			);
 
 			const record = await saveExploration(this.app, entities);
@@ -132,229 +138,6 @@ export default class OpenAlephPlugin extends Plugin {
 	async saveSettings() {
 		await this.saveData(this.settings);
 	}
-}
-
-// OpenAleph
-
-async function percolate(
-	instanceUrl: string,
-	apiKey: string | null,
-	bodyText: string,
-): Promise<OpenAlephPercolationApiResult> {
-	// TODO pagination
-	if (!apiKey || apiKey.trim() === '') {
-		throw new Error(`API key for ${instanceUrl} is empty.`);
-	}
-
-	const firstUrl = new URL(
-		'/api/2/beta/percolate?dehydrate=true',
-		instanceUrl,
-	);
-
-	const headers: Record<string, string> = {
-		'User-Agent': 'alephclient',
-		Authorization: apiKey,
-		// Pragma: 'no-cache',
-	};
-
-	const res = await requestUrl({
-		url: firstUrl.toString(),
-		method: 'POST',
-		contentType: 'application/json',
-		headers,
-		body: JSON.stringify({ text: bodyText }),
-	});
-
-	const firstRes = res.json as unknown as OpenAlephPercolationApiResult;
-
-	if (firstRes.status !== 'ok') {
-		return { ...firstRes, complete: true };
-	}
-
-	const results = [...firstRes.results];
-	let next = firstRes.next;
-	let error: unknown;
-
-	while (next) {
-		try {
-			const nextUrl = new URL(next, instanceUrl);
-
-			const res = await requestUrl({
-				url: nextUrl.toString(),
-				method: 'POST',
-				contentType: 'application/json',
-				headers,
-				body: JSON.stringify({ text: bodyText }),
-			});
-
-			const nextRes =
-				res.json as unknown as OpenAlephPercolationApiResult;
-
-			results.push(...nextRes.results);
-			next = nextRes.next;
-		} catch (e) {
-			console.warn(
-				`Percolation pagination for ${instanceUrl} stopped early:`,
-				e,
-			);
-			error = e;
-			break;
-		}
-	}
-
-	return {
-		...firstRes,
-		results,
-		complete: error === undefined,
-		error,
-	};
-}
-
-async function getCloselyCorrelated(
-	instanceUrl: string,
-	apiKey: string | null,
-	caption: string,
-	maxResults: number | null,
-): Promise<OpenAlephCloselyCorrelatedApiResult> {
-	if (!apiKey || apiKey.trim() === '') {
-		throw new Error(`API key for ${instanceUrl} is empty.`);
-	}
-
-	if (!maxResults) {
-		maxResults = 20;
-	}
-
-	const url = new URL('/api/2/entities', instanceUrl);
-	url.searchParams.set('facet_significant', 'names');
-	url.searchParams.set('limit', String(maxResults));
-	url.searchParams.set('q', caption);
-
-	const headers: Record<string, string> = {
-		'User-Agent': 'alephclient',
-		Authorization: apiKey,
-		// Pragma: 'no-cache',
-	};
-
-	const res = await requestUrl({
-		url: url.toString(),
-		method: 'GET',
-		contentType: 'application/json',
-		headers,
-	});
-
-	// TS throws if the body isn't valid JSON
-	const body = res.json as unknown;
-	return body as OpenAlephCloselyCorrelatedApiResult;
-}
-
-async function explore(
-	settings: OpenAlephPluginSettings,
-	app: App,
-	content: string,
-	noteName: string,
-): Promise<OpenAlephGraph> {
-	const enabledInstances = settings.instances.filter(
-		(instance) => instance.enabled,
-	);
-
-	const entities: OpenAlephGraph = {
-		centralNote: noteName,
-		relatedEntities: [],
-	};
-
-	for (let enabledInstance of enabledInstances) {
-		const apiKey = app.secretStorage.getSecret(enabledInstance.apiKeyName);
-		try {
-			// get related entities
-			const relatedEntities = await percolate(
-				enabledInstance.instanceUrl,
-				apiKey,
-				content,
-			);
-
-			if (relatedEntities.status !== 'ok') {
-				continue;
-			}
-
-			const newRelatedEntities = relatedEntities.results.flatMap(
-				(entity: unknown) => {
-					if (typeof entity !== 'object' || entity === null) {
-						console.warn(
-							'Skipping malformed entity:',
-							entity,
-							'(',
-							enabledInstance.instanceUrl,
-							')',
-						);
-						return [];
-					}
-					const e = entity as OpenAlephPercolationApiEntity;
-					return {
-						schema: e.schema,
-						dataset: e.dataset,
-						caption: e.caption,
-						id: e.id,
-						instance: enabledInstance.instanceUrl,
-						instanceName: enabledInstance.name,
-						instanceUrl: enabledInstance.instanceUrl,
-						url: e.links.self,
-						closelyCorrelated: [],
-					};
-				},
-			);
-
-			entities.relatedEntities?.push(...newRelatedEntities);
-
-			for (let relatedEntity of newRelatedEntities ?? []) {
-				const closelyCorrelatedTerms = await getCloselyCorrelated(
-					enabledInstance.instanceUrl,
-					apiKey,
-					relatedEntity.caption,
-					5,
-				);
-
-				if (closelyCorrelatedTerms.status !== 'ok') {
-					continue;
-				}
-
-				relatedEntity.closelyCorrelated?.push(
-					...(
-						closelyCorrelatedTerms.facets?.[
-							'names.significant_terms'
-						]?.values ?? []
-					).flatMap((value: unknown) => {
-						if (typeof value !== 'object' || value === null) {
-							console.warn(
-								'Skipping malformed closely correlated term:',
-								value,
-								'(',
-								enabledInstance.instanceUrl,
-								')',
-							);
-							return [];
-						}
-						const v = value as OpenAlephCloselyCorrelatedApiTerm;
-						const relatedEntityCaptionAsQuery =
-							relatedEntity.caption.trim().replace(/\s+/g, '+');
-						const relatedTermCaptionAsQuery = v.label
-							.trim()
-							.replace(/\s+/g, '+');
-						return {
-							id: v.id,
-							label: v.label,
-							count: v.count,
-							searchQuery: `${enabledInstance.instanceUrl}/search?limit=30&q=${relatedEntityCaptionAsQuery}+"${relatedTermCaptionAsQuery}"`,
-						};
-					}),
-				);
-			}
-		} catch (err: unknown) {
-			const message = err instanceof Error ? err.message : String(err);
-			new Notice(message);
-		}
-	}
-
-	return entities;
 }
 
 /* eslint-enable obsidianmd/ui/sentence-case -- Done with weird sentnces */

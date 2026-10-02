@@ -13,6 +13,8 @@ export interface OpenAlephEntity {
 	instanceUrl: string;
 	url: string;
 	closelyCorrelated: OpenAlephCloselyCorrelatedApiTerm[];
+	properties?: Record<string, unknown[]>;
+	[key: string]: unknown;
 }
 
 export interface OpenAlephCloselyCorrelatedApiResult {
