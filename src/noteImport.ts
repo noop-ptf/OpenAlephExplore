@@ -1,4 +1,4 @@
-import { stringifyYaml } from 'obsidian';
+import { stringifyYaml, normalizePath } from 'obsidian';
 import type OpenAlephPlugin from './main';
 import { type OpenAlephEntity } from './types';
 import { ensureFolder } from './storage';
@@ -22,14 +22,14 @@ export async function writeNote(
 	instanceFolder: string,
 	plugin: OpenAlephPlugin,
 ): Promise<void> {
-	console.log(entity);
+	// / \ : are removed
+	// * ? " < > | are rejected by Windows
+	// # ^ [ ] | break Obsidian links
+	const safeName =
+		entity.caption.replace(/[\\/:*?"<>|#^[\]]/g, '').trim() || entity.id;
 	const dataset = entity.dataset ?? 'unknown';
-	console.log('dataset ', dataset);
-	console.log('ftmdFolder ', ftmdFolder);
-	console.log('instancefolder ', instanceFolder);
-	const path = `${ftmdFolder}/${instanceFolder}/${dataset}`;
-	console.log('path ', path);
-	const filePath = `${path}/${entity.caption.replaceAll(/[/\\:]/g, '')}.md`;
+	const path = normalizePath(`${ftmdFolder}/${instanceFolder}/${dataset}`);
+	const filePath = normalizePath(`${path}/${safeName}.md`);
 	const fileContent = yamlifyEntity(entity);
 
 	await ensureFolder(plugin.app, path);

@@ -13,6 +13,7 @@ import { buildCytoscapeElements, buildStylesheet } from './graphBuilder';
 import { loadExplorationJson } from './storage';
 import { writeNote } from './noteImport';
 import { getEntity } from './requests';
+import { LoadingModal } from './modals';
 
 cytoscape.use(fcose);
 
@@ -159,6 +160,9 @@ export class EntityGraphView extends ItemView {
 	}
 
 	private async importEntity(entity: OpenAlephEntity): Promise<void> {
+		const loadingModal = new LoadingModal(this.app, 'Importing...');
+		loadingModal.open();
+
 		const instance = this.plugin.settings.instances.find(
 			(i) => i.instanceUrl === entity.instanceUrl,
 		);
@@ -182,6 +186,8 @@ export class EntityGraphView extends ItemView {
 			const message = e instanceof Error ? e.message : String(e);
 			new Notice(`Importing entity ${entity.caption} failed: ${message}`);
 			return;
+		} finally {
+			loadingModal.close();
 		}
 	}
 

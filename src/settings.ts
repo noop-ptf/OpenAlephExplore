@@ -129,8 +129,8 @@ class InstancesPage extends SettingPage {
 				.setValue(instance.instanceUrl)
 				.onChange(async (value) => {
 					instance.instanceUrl = value;
-					await this.plugin.saveSettings();
 					instance.connectionValid = false;
+					await this.plugin.saveSettings();
 				}),
 		);
 
@@ -139,8 +139,8 @@ class InstancesPage extends SettingPage {
 				.setValue(instance.apiKeyName)
 				.onChange(async (value) => {
 					instance.apiKeyName = value;
-					await this.plugin.saveSettings();
 					instance.connectionValid = false;
+					await this.plugin.saveSettings();
 				}),
 		);
 	}
@@ -182,8 +182,6 @@ export class OpenAlephSettingTab extends PluginSettingTab {
 		this.plugin = plugin;
 	}
 
-	// 1.13.0+: Obsidian calls this and skips display().
-	// Controls auto-bind to this.plugin.settings[key].
 	getSettingDefinitions(): SettingDefinitionItem[] {
 		return [
 			{

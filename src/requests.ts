@@ -10,6 +10,8 @@ import {
 	OpenAlephInstanceSettings,
 } from './types';
 
+const MAX_CLOSELY_CORRELATED_TERMS = 5;
+
 async function percolate(
 	instanceUrl: string,
 	apiKey: string | null,
@@ -182,13 +184,21 @@ export async function explore(
 
 			entities.relatedEntities?.push(...newRelatedEntities);
 
+			let failedCorrelations = 0;
+
 			for (const relatedEntity of newRelatedEntities) {
-				const closelyCorrelatedTerms = await getCloselyCorrelated(
-					enabledInstance.instanceUrl,
-					apiKey,
-					relatedEntity.caption,
-					5,
-				);
+				let closelyCorrelatedTerms: OpenAlephCloselyCorrelatedApiResult;
+				try {
+					closelyCorrelatedTerms = await getCloselyCorrelated(
+						enabledInstance.instanceUrl,
+						apiKey,
+						relatedEntity.caption,
+						MAX_CLOSELY_CORRELATED_TERMS,
+					);
+				} catch {
+					failedCorrelations++;
+					continue;
+				}
 
 				if (closelyCorrelatedTerms.status !== 'ok') {
 					continue;
@@ -223,6 +233,12 @@ export async function explore(
 							searchQuery: `${enabledInstance.instanceUrl}/search?limit=30&q=${relatedEntityCaptionAsQuery}+"${relatedTermCaptionAsQuery}"`,
 						};
 					}),
+				);
+			}
+
+			if (failedCorrelations > 0) {
+				new Notice(
+					`Could not load related names for ${failedCorrelations} of ${newRelatedEntities.length} entities from ${enabledInstance.name}.`,
 				);
 			}
 		} catch (err: unknown) {

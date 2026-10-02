@@ -32,6 +32,8 @@ export function buildMarkdownTableContent(entities: OpenAlephGraph): string {
 
 	const groupedEntities = groupEntitiesByInstance(entities);
 
+	const escapeCell = (s: string): string => s.replace(/([|[\]])/g, '\\$1');
+
 	for (const entitiesGroupedByInstance of groupedEntities) {
 		let addedInstanceRow = false;
 		for (const relatedEntity of entitiesGroupedByInstance.relatedEntities ??
@@ -40,14 +42,14 @@ export function buildMarkdownTableContent(entities: OpenAlephGraph): string {
 			let addedEntityName = false;
 			if (relatedEntity.closelyCorrelated.length === 0) {
 				lines.push(
-					`| ${addedInstanceRow ? '' : `[${relatedEntity.instanceName}](${relatedEntity.instance})`} | ${addedEntityName ? '' : relatedEntity.schema} | ${addedEntityName ? '' : `[${relatedEntity.caption}](${modifiedUrl})`}  |  |`,
+					`| ${addedInstanceRow ? '' : `[${relatedEntity.instanceName}](${relatedEntity.instance})`} | ${addedEntityName ? '' : relatedEntity.schema} | ${addedEntityName ? '' : `[${escapeCell(relatedEntity.caption)}](${modifiedUrl})`}  |  |`,
 				);
 				addedInstanceRow = true;
 				addedEntityName = true;
 			} else {
 				for (const closelyCorrelated of relatedEntity.closelyCorrelated) {
 					lines.push(
-						`| ${addedInstanceRow ? '' : `[${relatedEntity.instanceName}](${relatedEntity.instance})`} | ${addedEntityName ? '' : relatedEntity.schema} | ${addedEntityName ? '' : `[${relatedEntity.caption}](${modifiedUrl})`} | [${closelyCorrelated.label}](${closelyCorrelated.searchQuery}) |`,
+						`| ${addedInstanceRow ? '' : `[${relatedEntity.instanceName}](${relatedEntity.instance})`} | ${addedEntityName ? '' : relatedEntity.schema} | ${addedEntityName ? '' : `[${escapeCell(relatedEntity.caption)}](${modifiedUrl})`} | [${escapeCell(closelyCorrelated.label)}](${closelyCorrelated.searchQuery}) |`,
 					);
 					addedInstanceRow = true;
 					addedEntityName = true;

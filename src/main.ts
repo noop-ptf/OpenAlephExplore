@@ -119,18 +119,15 @@ export default class OpenAlephPlugin extends Plugin {
 	}
 
 	private async openGraphForUuid(uuid: string): Promise<void> {
-		const existing = this.app.workspace.getLeavesOfType(
-			VIEW_TYPE_ENTITY_GRAPH,
-		);
-		const leaf = existing[0] ?? this.app.workspace.getLeaf('tab');
+		const leaf =
+			this.app.workspace.getLeavesOfType(VIEW_TYPE_ENTITY_GRAPH)[0] ??
+			this.app.workspace.getLeaf('tab');
 
-		if (existing.length === 0) {
-			await leaf.setViewState({
-				type: VIEW_TYPE_ENTITY_GRAPH,
-				active: true,
-				state: { uuid },
-			});
-		}
+		await leaf.setViewState({
+			type: VIEW_TYPE_ENTITY_GRAPH,
+			active: true,
+			state: { uuid },
+		});
 
 		await this.app.workspace.revealLeaf(leaf);
 	}
