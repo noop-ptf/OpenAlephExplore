@@ -1,7 +1,7 @@
 {
 	"id": "openaleph-explore",
 	"name": "OpenAleph Explore",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"minAppVersion": "1.13.0",
 	"description": "Turn your notes into contextual, structured data, by querying OpenAleph instances.",
 	"author": "noop",

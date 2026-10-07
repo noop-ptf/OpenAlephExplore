@@ -1,6 +1,6 @@
 {
 	"name": "openaleph-explore",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"description": "Turn your notes into contextual, structured data, by querying OpenAleph instances.",
 	"main": "main.js",
 	"type": "module",
