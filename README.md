@@ -1,18 +1,18 @@
 # OpenAleph Explore for Obsidian
 
-This Obsidian plug-in allows a user to send a note to all the OpenAleph instances they have access to, simultaneously, in order to extract structured Follow the Money data and related terms. The plug-in displays this data and graph form, tracing connections between the note, Follow the Money data, and closely related terms. All entities are also listed in a table. The Follow the Money data can be imported back into the user's Obsidian vault.
+This Obsidian plug-in allows a user to send a note to all the OpenAleph instances they have access to, simultaneously, in order to extract structured Follow the Money data and related terms. The plug-in displays this data in **graph form**, tracing connections between the note, Follow the Money data, and closely related terms. All entities are also listed in a **table**. The Follow the Money data can be imported back into the user's Obsidian vault.
+
+**The graph can surface surprising connections.** Different Follow the Money entities, from different OpenAleph instances, may have the same closely related term, which can unearth leads that would not have been visible from searching through only one instance.
 
 A video tutorial is in the works, to help guide users through how this plug-in can be used.
 
-OpenAleph 5.3 introduced a new [Screening](https://openaleph.org/blog/2026/how-to-use-the-new-screening-feature/) feature, that allows a user to search through an instance using a document instead of a search query. In other words, instead of searching for a name and some attributes, a journalist can now use their own notes or the text from an investigative article to find all the structured data that an OpenAleph instance has, that is directly related to the contents of the document. Think of this as _reverse search_.
+OpenAleph 5.3 introduced a new [Screening](https://openaleph.org/blog/2026/how-to-use-the-new-screening-feature/) feature, that allows a user to search through an instance using a document instead of a search query. In other words, instead of searching for a name and some attributes, a journalist can now use their own notes or the text from an investigative article to find all the structured data that an OpenAleph instance has, that are directly related to the contents of the document. Think of this as _reverse search_.
 
 The OpenAlephExplore plug-in allows a user to perform reverse search across all the OpenAleph instances that they have access to. The API key belonging to each instance is stored using the [SecretStorage](https://docs.obsidian.md/plugins/guides/secret-storage) Obsidian feature.
 
-OpenAlephExplore fetches all the [Follow the Money](https://followthemoney.tech/) data related to the note used for reverse search. Them, for each FtM entity, the plug-in also fetches up to 5 [closely correlated terms](https://openaleph.org/blog/2025/when-names-travel-together-discover-correlations-in-your-data/#the-discovery-dashboard).
+OpenAlephExplore fetches all the [Follow the Money](https://followthemoney.tech/) data related to the note used for reverse search. Then, for each Follow the Money entity, the plug-in also fetches up to 5 [closely correlated terms](https://openaleph.org/blog/2025/when-names-travel-together-discover-correlations-in-your-data/#the-discovery-dashboard).
 
-All data is displayed in a connected graph and in a table. For each note, a direct link to the table, the graph, and the raw data are added to the [Markdown frontmatter](https://frontmatter.codes/docs/markdown) of the note. This data is saved in a separate directory, called `openaleph`.
-
-**The graph can surface surprising connections.** Different Follow the Money entities, from different OpenAleph instances, may have the same closely related term, which can unearth leads that would not have been visible from searching through only one instance.
+All data is displayed in a connected graph and in a table. For each note, a direct link to the table, the graph, and the raw data (in JSON format) are added to the [Markdown frontmatter](https://frontmatter.codes/docs/markdown) of the note. This data is saved in a separate directory, called `openaleph`.
 
 The plug-in allows investigator to save Follow the Money entities to their Obsidian vault. The properties are rendered as [Markdown frontmatter](https://frontmatter.codes/docs/markdown) at the top of the note. This note is saved in a separate directory, with a configurable name (by default, `followthemarkdown`).
 
