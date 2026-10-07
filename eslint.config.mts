@@ -29,13 +29,17 @@ export default defineConfig(
 		},
 	},
 	...obsidianmd.configs.recommended,
-	// TODO: Remove this once we get more towards something release-worthy.
 	{
-		files: ['**/*.ts'],
+		files: ['**/*.ts', '**/*.tsx'],
 		rules: {
-			'no-console': 'off',
-			'obsidianmd/rule-custom-message': 'off',
 			'eslint-comments/no-restricted-disable': 'off',
+			'obsidianmd/ui/sentence-case': [
+				'warn',
+				{
+					brands: ['OpenAleph', 'FollowTheMoney', 'Obsidian'],
+					mode: 'loose',
+				},
+			],
 		},
 	},
 );
