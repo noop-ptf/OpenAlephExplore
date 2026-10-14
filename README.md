@@ -42,7 +42,7 @@ This plug-in can be installed directly via the Obsidian Community plug-ins catal
 
 If you already have the Beta Reviewers Auto-update Tester plug-in (called BRAT), you can add `https://github.com/noop-ptf/OpenAlephExplore.git` and select the latest version of this plug-in.
 
-<p align="center"><img src="assets/brat.png" alt="Screenshot demonstrating how to add the GitHub URL for the OpenAleph Explore plug-in to BRAT" width="500" height="1100"></p>
+<p align="center"><img src="src/assets/brat.png" alt="Screenshot demonstrating how to add the GitHub URL for the OpenAleph Explore plug-in to BRAT" width="500" height="1100"></p>
 
 ### Install from source code
 
