@@ -119,14 +119,14 @@ function getCssVar(name: string, fallback: string): string {
 		return fallback;
 	}
 
-	// eslint-disable-next-line obsidianmd/prefer-create-el -- document.createSpan() internally tries to do the equivalent of document.appendChild(newSpanElement) the browser throws a native DOM error
-	const probe = document.createElement('span');
-	probe.style.color = `var(${name})`;
-	document.body.appendChild(probe);
-	const resolved = getComputedStyle(probe).color;
-	document.body.removeChild(probe);
-
-	return resolved.length > 0 ? resolved : fallback;
+	const probe = document.body.createSpan();
+	try {
+		probe.setCssStyles({ color: `var(${name})` });
+		const resolved = getComputedStyle(probe).color;
+		return resolved.length > 0 ? resolved : fallback;
+	} finally {
+		probe.remove();
+	}
 }
 
 export function buildStylesheet(): cytoscape.StylesheetJsonBlock[] {
@@ -148,10 +148,6 @@ export function buildStylesheet(): cytoscape.StylesheetJsonBlock[] {
 				'text-valign': 'bottom',
 				'text-halign': 'center',
 				'text-margin-y': 4,
-
-				// 'text-valign': 'center',
-				// 'text-halign': 'right',
-				// 'text-margin-x': 6,
 
 				'background-color': borderMuted,
 				width: 24,
@@ -190,7 +186,7 @@ export function buildStylesheet(): cytoscape.StylesheetJsonBlock[] {
 			selector: 'node[type="correlatedTerm"]',
 			style: {
 				'background-color': colorOrange,
-				// Scale node size gently with correlation count, floor/ceiling to
+				// scale node size gently with correlation count, floor/ceiling to
 				// keep very small/large counts from producing unreadable nodes.
 				width: 'mapData(count, 0, 30, 8, 24)',
 				height: 'mapData(count, 0, 30, 8, 24)',
