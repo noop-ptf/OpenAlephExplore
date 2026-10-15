@@ -52,9 +52,28 @@ If you already have the Beta Reviewers Auto-update Tester plug-in (called BRAT),
 4. Run `npm run build`. This should produce three files: `main.js`, `styles.css`, `manifest.json`.
 5. Open Obsidian, navigate to the **Settings** > **Community plugins** and refresh the list of plug-ins. OpenAleph Search should appear. Enable it.
 
+## Tentative roadmap
+
+Here are future functionalities we are considering. If you want to suggest something else you would like to see added to this plug-in, feel warmly invited to open an Issue.
+
+- [ ] allow users to set the maximum number of closely related terms that OpenAleph Explore imports (currently hard-coded)
+- [ ] percolation can bring in many Follow the Money entities which essentially have the sane caption (name). This is because certain names (of people, or companies) appear in many different datasets. The graph could cluster these together.
+
+If you have suggestions on improving the graph-related experience of OpenAleph Explore, reach out to [catileptic](https://chaos.social/@catileptic) (or open a GitHub Issue).
+
 ## Related projects
 
 [OpenAleph Search](https://github.com/noop-ptf/OpenAlephSearch) allows a user to search through many different OpenAleph instances simultaneously.
+
+## Team
+
+The noop team consists of:\*\*
+
+- Anna Główczyńska (UI/UX designer)
+- Moritz Neeb (developer)
+- Sabina-Alexandra Ștefănescu (developer)
+
+The **noop** team is [active on Mastodon](https://chaos.social/@noop), and will share news about releases, demos and other tidbits. You can also follow the individual developers: [zormit](https://chaos.social/@zormit) and [catileptic](https://chaos.social/@catileptic).
 
 ## Sponsor
 
