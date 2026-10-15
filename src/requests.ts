@@ -24,6 +24,7 @@ async function percolate(
 
 	const firstUrl = new URL('/api/2/beta/percolate', instanceUrl);
 	firstUrl.searchParams.set('dehydrate', 'true');
+
 	if (maxPercolatedEntities > 0) {
 		firstUrl.searchParams.set('limit', String(maxPercolatedEntities));
 	}
@@ -48,9 +49,19 @@ async function percolate(
 		return { ...firstRes, complete: true };
 	}
 
+	let error: unknown;
+	if (firstRes.results.length > maxPercolatedEntities) {
+		const results = firstRes.results.slice(0, maxPercolatedEntities);
+		return {
+			...firstRes,
+			results,
+			complete: error === undefined,
+			error,
+		};
+	}
+
 	const results = [...firstRes.results];
 	let next = firstRes.next;
-	let error: unknown;
 
 	while (next) {
 		try {
@@ -66,6 +77,12 @@ async function percolate(
 
 			const nextRes =
 				res.json as unknown as OpenAlephPercolationApiResult;
+
+			const numResultsLeft = maxPercolatedEntities - results.length;
+			if (nextRes.results.length > numResultsLeft) {
+				results.push(...nextRes.results.slice(0, numResultsLeft));
+				break;
+			}
 
 			results.push(...nextRes.results);
 			next = nextRes.next;
@@ -92,13 +109,13 @@ async function getCloselyCorrelated(
 	apiKey: string | null,
 	caption: string,
 	maxResults: number | null,
-): Promise<OpenAlephCloselyCorrelatedApiResult> {
+): Promise<OpenAlephCloselyCorrelatedApiTerm[]> {
 	if (!apiKey || apiKey.trim() === '') {
 		throw new Error(`API key for ${instanceUrl} is empty.`);
 	}
 
 	if (!maxResults) {
-		maxResults = 20;
+		maxResults = 5;
 	}
 
 	const url = new URL('/api/2/entities', instanceUrl);
@@ -109,18 +126,26 @@ async function getCloselyCorrelated(
 	const headers: Record<string, string> = {
 		'User-Agent': 'alephclient',
 		Authorization: apiKey,
-		// Pragma: 'no-cache',
+		Pragma: 'no-cache',
 	};
 
 	const res = await requestUrl({
 		url: url.toString(),
 		method: 'GET',
-		contentType: 'application/json',
 		headers,
 	});
 
-	const body = res.json as unknown;
-	return body as OpenAlephCloselyCorrelatedApiResult;
+	const body = res.json as unknown as OpenAlephCloselyCorrelatedApiResult;
+
+	if (body.status !== 'ok') {
+		return [];
+	}
+
+	const returnValue =
+		body.facets?.['names.significant_terms']?.values.slice(0, maxResults) ??
+		[];
+
+	return returnValue;
 }
 
 export async function explore(
@@ -138,6 +163,8 @@ export async function explore(
 		centralNote: noteName,
 		relatedEntities: [],
 	};
+
+	// TODO paralelyze requests
 
 	for (const enabledInstance of enabledInstances) {
 		const apiKey = app.secretStorage.getSecret(enabledInstance.apiKeyName);
@@ -187,7 +214,7 @@ export async function explore(
 			let failedCorrelations = 0;
 
 			for (const relatedEntity of newRelatedEntities) {
-				let closelyCorrelatedTerms: OpenAlephCloselyCorrelatedApiResult;
+				let closelyCorrelatedTerms: OpenAlephCloselyCorrelatedApiTerm[];
 				try {
 					closelyCorrelatedTerms = await getCloselyCorrelated(
 						enabledInstance.instanceUrl,
@@ -200,16 +227,8 @@ export async function explore(
 					continue;
 				}
 
-				if (closelyCorrelatedTerms.status !== 'ok') {
-					continue;
-				}
-
 				relatedEntity.closelyCorrelated.push(
-					...(
-						closelyCorrelatedTerms.facets?.[
-							'names.significant_terms'
-						]?.values ?? []
-					).flatMap((value: unknown) => {
+					...closelyCorrelatedTerms.flatMap((value: unknown) => {
 						if (typeof value !== 'object' || value === null) {
 							console.warn(
 								'Skipping malformed closely correlated term:',
