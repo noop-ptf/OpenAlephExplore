@@ -67,7 +67,7 @@ If you have suggestions on improving the graph-related experience of OpenAleph E
 
 ## Team
 
-The noop team consists of:\*\*
+The noop team consists of:
 
 - Anna Główczyńska (UI/UX designer)
 - Moritz Neeb (developer)
