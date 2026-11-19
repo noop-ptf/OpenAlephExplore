@@ -81,3 +81,8 @@ OpenAleph Explore: an Obsidian Plug-in is funded by the German **Federal Ministr
 
 <img src="src/assets/bmftr-funding.png" alt="Funded by the German Federal Ministry of Research, Technology and Space (BMFTR)" width="200">
 <img src="src/assets/prototype-fund-en.png" alt="Funded through the Prototype Fund" width="200">
+
+
+## Generative Artificial Intelligence Disclaimer
+
+This repository contains code that was generated using generative AI software based on Large Language Models. The developers behind this project used genAI software to support a rapid prototyping process and the styling of the user interface. The developers reviewed, refactored and tested the code before committing it.
